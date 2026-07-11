@@ -31,6 +31,27 @@ function parseFilters(query: Record<string, unknown>): Filters {
   return filters;
 }
 
+// The generated Zod schemas type `from`/`to` as `zod.date()` (they represent
+// an ISO date-time in the OpenAPI contract), but Express always delivers
+// query string values as plain strings — `zod.date().safeParse("2026-...")`
+// fails validation every time, which was causing every analytics request to
+// 400 regardless of what the client sent. Convert well-formed date strings
+// to real Date instances before validating so the schema's intent (a valid
+// date-time) is actually enforced instead of accidentally rejecting all input.
+function coerceDateStrings<T extends Record<string, unknown>>(query: T): T {
+  const coerced: Record<string, unknown> = { ...query };
+  for (const key of ["from", "to"] as const) {
+    const value = coerced[key];
+    if (typeof value === "string" && value.length > 0) {
+      const parsedDate = new Date(value);
+      if (!Number.isNaN(parsedDate.getTime())) {
+        coerced[key] = parsedDate;
+      }
+    }
+  }
+  return coerced as T;
+}
+
 async function userLinkIds(userId: string, linkId?: number): Promise<number[]> {
   const rows = await db
     .select({ id: linksTable.id })
@@ -62,7 +83,7 @@ function botWhere(linkIds: number[], filters: Filters) {
 // GET /analytics/overview
 router.get("/analytics/overview", async (req, res) => {
   const userId = (req as unknown as AuthedRequest).userId;
-  const parsed = GetAnalyticsOverviewQueryParams.safeParse(req.query);
+  const parsed = GetAnalyticsOverviewQueryParams.safeParse(coerceDateStrings(req.query));
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid query parameters" });
     return;
@@ -82,25 +103,27 @@ router.get("/analytics/overview", async (req, res) => {
     return;
   }
 
-  const [clickAgg] = await db
-    .select({
-      humanClicks: count(),
-      uniqueVisitors: countDistinct(clickEventsTable.visitorHash),
-    })
-    .from(clickEventsTable)
-    .where(clickWhere(linkIds, filters));
-
-  const [botAgg] = await db
-    .select({ botRequests: count() })
-    .from(botEventsTable)
-    .where(botWhere(linkIds, filters));
-
-  const [fbAgg] = await db
-    .select({ facebookRequests: count() })
-    .from(botEventsTable)
-    .where(
-      and(botWhere(linkIds, filters), eq(botEventsTable.botType, "facebook_meta_crawler")),
-    );
+  // Run the three aggregate queries concurrently instead of one round trip
+  // at a time — they're independent, so serializing them only adds latency.
+  const [[clickAgg], [botAgg], [fbAgg]] = await Promise.all([
+    db
+      .select({
+        humanClicks: count(),
+        uniqueVisitors: countDistinct(clickEventsTable.visitorHash),
+      })
+      .from(clickEventsTable)
+      .where(clickWhere(linkIds, filters)),
+    db
+      .select({ botRequests: count() })
+      .from(botEventsTable)
+      .where(botWhere(linkIds, filters)),
+    db
+      .select({ facebookRequests: count() })
+      .from(botEventsTable)
+      .where(
+        and(botWhere(linkIds, filters), eq(botEventsTable.botType, "facebook_meta_crawler")),
+      ),
+  ]);
 
   const totalLinksRows = filters.linkId !== undefined ? linkIds.length : linkIds.length;
 
@@ -129,7 +152,7 @@ function bucketExpr(column: any, granularity: string) {
 // GET /analytics/trend
 router.get("/analytics/trend", async (req, res) => {
   const userId = (req as unknown as AuthedRequest).userId;
-  const parsed = GetAnalyticsTrendQueryParams.safeParse(req.query);
+  const parsed = GetAnalyticsTrendQueryParams.safeParse(coerceDateStrings(req.query));
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid query parameters" });
     return;
@@ -143,23 +166,24 @@ router.get("/analytics/trend", async (req, res) => {
     return;
   }
 
-  const clickRows = await db
-    .select({
-      bucket: bucketExpr(clickEventsTable.createdAt, granularity),
-      humanClicks: count(),
-    })
-    .from(clickEventsTable)
-    .where(clickWhere(linkIds, filters))
-    .groupBy(bucketExpr(clickEventsTable.createdAt, granularity));
-
-  const botRows = await db
-    .select({
-      bucket: bucketExpr(botEventsTable.createdAt, granularity),
-      botRequests: count(),
-    })
-    .from(botEventsTable)
-    .where(botWhere(linkIds, filters))
-    .groupBy(bucketExpr(botEventsTable.createdAt, granularity));
+  const [clickRows, botRows] = await Promise.all([
+    db
+      .select({
+        bucket: bucketExpr(clickEventsTable.createdAt, granularity),
+        humanClicks: count(),
+      })
+      .from(clickEventsTable)
+      .where(clickWhere(linkIds, filters))
+      .groupBy(bucketExpr(clickEventsTable.createdAt, granularity)),
+    db
+      .select({
+        bucket: bucketExpr(botEventsTable.createdAt, granularity),
+        botRequests: count(),
+      })
+      .from(botEventsTable)
+      .where(botWhere(linkIds, filters))
+      .groupBy(bucketExpr(botEventsTable.createdAt, granularity)),
+  ]);
 
   const merged = new Map<string, { humanClicks: number; botRequests: number }>();
   for (const row of clickRows) {
@@ -197,7 +221,7 @@ function toBreakdown(rows: { label: string | null; value: number }[]) {
 // GET /analytics/breakdowns
 router.get("/analytics/breakdowns", async (req, res) => {
   const userId = (req as unknown as AuthedRequest).userId;
-  const parsed = GetAnalyticsBreakdownsQueryParams.safeParse(req.query);
+  const parsed = GetAnalyticsBreakdownsQueryParams.safeParse(coerceDateStrings(req.query));
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid query parameters" });
     return;
@@ -258,7 +282,7 @@ router.get("/analytics/breakdowns", async (req, res) => {
 // GET /analytics/top-links
 router.get("/analytics/top-links", async (req, res) => {
   const userId = (req as unknown as AuthedRequest).userId;
-  const parsed = GetTopLinksQueryParams.safeParse(req.query);
+  const parsed = GetTopLinksQueryParams.safeParse(coerceDateStrings(req.query));
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid query parameters" });
     return;

@@ -33,6 +33,13 @@ export const clickEventsTable = pgTable(
   (table) => [
     index("click_events_link_id_idx").on(table.linkId),
     index("click_events_created_at_idx").on(table.createdAt),
+    // Overview/trend queries always filter by linkId IN (...) AND createdAt
+    // BETWEEN ... — a composite index lets Postgres satisfy both without a
+    // full scan + filter.
+    index("click_events_link_id_created_at_idx").on(table.linkId, table.createdAt),
+    // countDistinct(visitorHash) is used for "unique visitors" on every
+    // overview/top-links request.
+    index("click_events_visitor_hash_idx").on(table.visitorHash),
   ],
 );
 
@@ -55,6 +62,7 @@ export const botEventsTable = pgTable(
   (table) => [
     index("bot_events_link_id_idx").on(table.linkId),
     index("bot_events_created_at_idx").on(table.createdAt),
+    index("bot_events_link_id_created_at_idx").on(table.linkId, table.createdAt),
   ],
 );
 
