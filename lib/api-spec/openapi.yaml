@@ -3,13 +3,17 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: LinkScope URL shortener and analytics API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: links
+    description: Short link management
+  - name: analytics
+    description: Human and bot analytics
 paths:
   /healthz:
     get:
@@ -24,7 +28,276 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /links:
+    get:
+      operationId: listLinks
+      tags: [links]
+      summary: List the current user's short links, each with a stats summary
+      responses:
+        "200":
+          description: List of links
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LinkWithStats"
+    post:
+      operationId: createLink
+      tags: [links]
+      summary: Create a new short link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LinkInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Link"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /links/{id}:
+    get:
+      operationId: getLink
+      tags: [links]
+      summary: Get a single link with stats
+      parameters:
+        - $ref: "#/components/parameters/LinkId"
+      responses:
+        "200":
+          description: Link detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LinkWithStats"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateLink
+      tags: [links]
+      summary: Update a link (destination, title, enabled state, expiration, preview settings)
+      parameters:
+        - $ref: "#/components/parameters/LinkId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LinkUpdate"
+      responses:
+        "200":
+          description: Updated link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Link"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteLink
+      tags: [links]
+      summary: Delete a link
+      parameters:
+        - $ref: "#/components/parameters/LinkId"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /links/{id}/qrcode:
+    get:
+      operationId: getLinkQrCode
+      tags: [links]
+      summary: Get a QR code (as a data URL) for a link's short URL
+      parameters:
+        - $ref: "#/components/parameters/LinkId"
+      responses:
+        "200":
+          description: QR code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QrCode"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /analytics/overview:
+    get:
+      operationId: getAnalyticsOverview
+      tags: [analytics]
+      summary: Dashboard overview totals (human + bot) for the current user
+      parameters:
+        - $ref: "#/components/parameters/FromDate"
+        - $ref: "#/components/parameters/ToDate"
+        - $ref: "#/components/parameters/FilterLinkId"
+        - $ref: "#/components/parameters/FilterCountry"
+      responses:
+        "200":
+          description: Overview totals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsOverview"
+
+  /analytics/trend:
+    get:
+      operationId: getAnalyticsTrend
+      tags: [analytics]
+      summary: Human click / bot request time series at a given granularity
+      parameters:
+        - $ref: "#/components/parameters/FromDate"
+        - $ref: "#/components/parameters/ToDate"
+        - $ref: "#/components/parameters/FilterLinkId"
+        - $ref: "#/components/parameters/FilterCountry"
+        - name: granularity
+          in: query
+          schema:
+            $ref: "#/components/schemas/TrendGranularity"
+      responses:
+        "200":
+          description: Trend buckets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrendPoint"
+
+  /analytics/breakdowns:
+    get:
+      operationId: getAnalyticsBreakdowns
+      tags: [analytics]
+      summary: Country, city, device, browser, OS, referrer, traffic source and bot classification breakdowns
+      parameters:
+        - $ref: "#/components/parameters/FromDate"
+        - $ref: "#/components/parameters/ToDate"
+        - $ref: "#/components/parameters/FilterLinkId"
+        - $ref: "#/components/parameters/FilterCountry"
+      responses:
+        "200":
+          description: Breakdowns
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsBreakdowns"
+
+  /analytics/top-links:
+    get:
+      operationId: getTopLinks
+      tags: [analytics]
+      summary: Top performing links by human clicks
+      parameters:
+        - $ref: "#/components/parameters/FromDate"
+        - $ref: "#/components/parameters/ToDate"
+      responses:
+        "200":
+          description: Top links
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TopLink"
+
+  /analytics/recent-activity:
+    get:
+      operationId: getRecentHumanActivity
+      tags: [analytics]
+      summary: Recent human click activity
+      parameters:
+        - $ref: "#/components/parameters/FilterLinkId"
+      responses:
+        "200":
+          description: Recent human clicks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HumanClickActivity"
+
+  /analytics/recent-bot-activity:
+    get:
+      operationId: getRecentBotActivity
+      tags: [analytics]
+      summary: Recent bot request activity
+      parameters:
+        - $ref: "#/components/parameters/FilterLinkId"
+      responses:
+        "200":
+          description: Recent bot requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BotActivity"
+
 components:
+  parameters:
+    LinkId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    FromDate:
+      name: from
+      in: query
+      schema:
+        type: string
+        format: date-time
+    ToDate:
+      name: to
+      in: query
+      schema:
+        type: string
+        format: date-time
+    FilterLinkId:
+      name: linkId
+      in: query
+      schema:
+        type: integer
+    FilterCountry:
+      name: country
+      in: query
+      schema:
+        type: string
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +307,317 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    TrendGranularity:
+      type: string
+      enum: [hourly, daily, weekly, monthly]
+
+    Link:
+      type: object
+      required:
+        - id
+        - shortCode
+        - shortUrl
+        - originalUrl
+        - title
+        - isEnabled
+        - expiresAt
+        - previewTitle
+        - previewDescription
+        - previewImageUrl
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+        shortCode:
+          type: string
+        shortUrl:
+          type: string
+          description: Full public short URL (clean /s/{code} path)
+        legacyUrl:
+          type: string
+          description: Legacy /r/{code} redirect path, kept for backward compatibility
+        originalUrl:
+          type: string
+        title:
+          type: ["string", "null"]
+        isEnabled:
+          type: boolean
+        expiresAt:
+          type: ["string", "null"]
+          format: date-time
+        previewTitle:
+          type: ["string", "null"]
+        previewDescription:
+          type: ["string", "null"]
+        previewImageUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    LinkStats:
+      type: object
+      required:
+        - humanClicks
+        - uniqueVisitors
+        - botRequests
+        - totalRequests
+      properties:
+        humanClicks:
+          type: integer
+        uniqueVisitors:
+          type: integer
+        botRequests:
+          type: integer
+        totalRequests:
+          type: integer
+
+    LinkWithStats:
+      allOf:
+        - $ref: "#/components/schemas/Link"
+        - type: object
+          required: [stats]
+          properties:
+            stats:
+              $ref: "#/components/schemas/LinkStats"
+
+    LinkInput:
+      type: object
+      required: [originalUrl]
+      properties:
+        originalUrl:
+          type: string
+          minLength: 1
+        customAlias:
+          type: string
+        title:
+          type: string
+        expiresAt:
+          type: ["string", "null"]
+          format: date-time
+        previewTitle:
+          type: string
+        previewDescription:
+          type: string
+        previewImageUrl:
+          type: string
+
+    LinkUpdate:
+      type: object
+      properties:
+        originalUrl:
+          type: string
+          minLength: 1
+        title:
+          type: ["string", "null"]
+        isEnabled:
+          type: boolean
+        expiresAt:
+          type: ["string", "null"]
+          format: date-time
+        previewTitle:
+          type: ["string", "null"]
+        previewDescription:
+          type: ["string", "null"]
+        previewImageUrl:
+          type: ["string", "null"]
+
+    QrCode:
+      type: object
+      required: [dataUrl, shortUrl]
+      properties:
+        dataUrl:
+          type: string
+          description: base64 PNG data URL
+        shortUrl:
+          type: string
+
+    AnalyticsOverview:
+      type: object
+      required:
+        - totalLinks
+        - humanClicks
+        - uniqueVisitors
+        - botRequests
+        - facebookRequests
+        - totalRequests
+      properties:
+        totalLinks:
+          type: integer
+        humanClicks:
+          type: integer
+        uniqueVisitors:
+          type: integer
+        botRequests:
+          type: integer
+        facebookRequests:
+          type: integer
+        totalRequests:
+          type: integer
+
+    TrendPoint:
+      type: object
+      required: [bucket, humanClicks, botRequests]
+      properties:
+        bucket:
+          type: string
+          description: ISO timestamp marking the start of the bucket
+        humanClicks:
+          type: integer
+        botRequests:
+          type: integer
+
+    BreakdownEntry:
+      type: object
+      required: [label, count, percentage]
+      properties:
+        label:
+          type: string
+        count:
+          type: integer
+        percentage:
+          type: number
+
+    AnalyticsBreakdowns:
+      type: object
+      required:
+        - country
+        - city
+        - device
+        - browser
+        - os
+        - referrer
+        - trafficSource
+        - botClassification
+      properties:
+        country:
+          type: array
+          items:
+            $ref: "#/components/schemas/BreakdownEntry"
+        city:
+          type: array
+          items:
+            $ref: "#/components/schemas/BreakdownEntry"
+        device:
+          type: array
+          items:
+            $ref: "#/components/schemas/BreakdownEntry"
+        browser:
+          type: array
+          items:
+            $ref: "#/components/schemas/BreakdownEntry"
+        os:
+          type: array
+          items:
+            $ref: "#/components/schemas/BreakdownEntry"
+        referrer:
+          type: array
+          items:
+            $ref: "#/components/schemas/BreakdownEntry"
+        trafficSource:
+          type: array
+          items:
+            $ref: "#/components/schemas/BreakdownEntry"
+        botClassification:
+          type: array
+          items:
+            $ref: "#/components/schemas/BreakdownEntry"
+
+    TopLink:
+      type: object
+      required: [id, shortCode, shortUrl, title, originalUrl, humanClicks, uniqueVisitors]
+      properties:
+        id:
+          type: integer
+        shortCode:
+          type: string
+        shortUrl:
+          type: string
+        title:
+          type: ["string", "null"]
+        originalUrl:
+          type: string
+        humanClicks:
+          type: integer
+        uniqueVisitors:
+          type: integer
+
+    HumanClickActivity:
+      type: object
+      required:
+        - id
+        - linkId
+        - shortCode
+        - linkTitle
+        - country
+        - city
+        - deviceType
+        - browser
+        - os
+        - referrer
+        - trafficSource
+        - clickedAt
+      properties:
+        id:
+          type: integer
+        linkId:
+          type: integer
+        shortCode:
+          type: string
+        linkTitle:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        deviceType:
+          type: string
+        browser:
+          type: ["string", "null"]
+        os:
+          type: ["string", "null"]
+        referrer:
+          type: ["string", "null"]
+        trafficSource:
+          type: string
+        clickedAt:
+          type: string
+          format: date-time
+
+    BotActivity:
+      type: object
+      required:
+        - id
+        - linkId
+        - shortCode
+        - linkTitle
+        - classification
+        - userAgent
+        - requestedAt
+      properties:
+        id:
+          type: integer
+        linkId:
+          type: integer
+        shortCode:
+          type: string
+        linkTitle:
+          type: ["string", "null"]
+        classification:
+          type: string
+        userAgent:
+          type: ["string", "null"]
+        requestedAt:
+          type: string
+          format: date-time

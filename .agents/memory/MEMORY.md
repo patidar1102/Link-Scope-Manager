@@ -1,0 +1,2 @@
+- [geoip-lite esbuild bundling](geoip-lite-esbuild-bundling.md) — geoip-lite breaks at runtime if bundled by esbuild; must stay external.
+- [Short link root-domain limitation](artifact-path-routing-limits.md) — an api-server artifact can't literally own the bare root path in this proxy model.

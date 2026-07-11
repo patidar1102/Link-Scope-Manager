@@ -29,6 +29,9 @@ async function buildAll() {
     // - use path traversal to read files (e.g. @google-cloud/secret-manager loads sibling .proto files)
     external: [
       "*.node",
+      // Loads .dat files via path.join(__dirname, ...) relative to its own
+      // package directory — bundling breaks that path resolution.
+      "geoip-lite",
       "sharp",
       "better-sqlite3",
       "sqlite3",

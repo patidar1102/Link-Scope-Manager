@@ -1,0 +1,378 @@
+Upgrade my existing LinkScope URL shortener into a complete production-ready URL shortener and advanced analytics platform.
+
+IMPORTANT:
+Work on the existing application and database.
+Do not replace working features with a static UI mockup.
+Keep existing user accounts, links, redirects and analytics compatible where possible.
+Create safe database migrations for new fields.
+Test the complete application before finishing.
+
+==============================
+SHORT URL SYSTEM
+==============================
+
+- Create unique short URLs.
+- Support custom aliases.
+- Allow editing and deleting links.
+- Allow enabling and disabling links.
+- Support link expiration dates.
+- Generate a QR code for every short link.
+- Add a one-tap Copy Link button.
+- Validate destination URLs.
+- Prevent redirect loops.
+- Keep redirects extremely fast.
+
+Prepare the application to work correctly with a custom domain such as watchgo.fun.
+
+When a custom domain is connected, generate clean short URLs like:
+
+https://watchgo.fun/5YJofft
+
+Do not require /r/ in public short URLs.
+
+Keep legacy /r/:shortCode links working for backward compatibility.
+
+==============================
+HUMAN AND BOT DETECTION
+==============================
+
+Detect known crawlers and automated requests using reasonable User-Agent and request signals.
+
+Classify requests as:
+
+- Human
+- Facebook/Meta Crawler
+- Social Preview Bot
+- Search Engine Bot
+- Suspicious Bot
+- Unknown Bot
+
+Store the request classification in analytics.
+
+Bot requests must NOT be counted as:
+- Human clicks
+- Unique human visitors
+
+Keep Human and Bot analytics separate.
+
+Do not permanently store raw IP addresses.
+
+Use privacy-friendly hashed or anonymized visitor identifiers.
+
+==============================
+FACEBOOK / META PREVIEW SUPPORT
+==============================
+
+Implement legitimate Facebook, Meta and social media link preview support.
+
+Do not implement deceptive cloaking.
+
+Do not use bot handling to hide a different destination or bypass platform review.
+
+When a legitimate Facebook/Meta or social preview crawler accesses a short URL:
+
+- Do not count the request as a human click.
+- Serve a fast HTTP 200 lightweight HTML preview response on the same short URL.
+- Include valid Open Graph metadata.
+
+Required metadata:
+
+og:title
+og:description
+og:image
+og:url
+og:type
+
+Also include:
+
+twitter:card
+twitter:title
+twitter:description
+twitter:image
+
+Use the canonical public short URL in og:url.
+
+Do not block legitimate Facebook/Meta preview crawlers.
+
+Add Preview Settings for every short link:
+
+- Preview Title
+- Preview Description
+- Preview Image URL
+
+Validate preview image URLs.
+
+If custom preview settings are empty, use safe fallback metadata that accurately represents the configured link.
+
+Make preview HTML lightweight and fast.
+
+Real human visitors must continue to redirect to the configured original destination URL.
+
+==============================
+ADVANCED HUMAN ANALYTICS
+==============================
+
+Track analytics for human visitors:
+
+- Total human clicks
+- Unique human visitors
+- Country
+- City where reasonably available
+- Device type
+- Browser
+- Operating system
+- Referrer
+- Traffic source
+- Click date
+- Click time
+
+Device types:
+
+- Mobile
+- Desktop
+- Tablet
+- Other
+
+Track traffic sources such as:
+
+- Facebook
+- Instagram
+- Google
+- YouTube
+- X / Twitter
+- Direct
+- Other
+
+Add daily analytics.
+
+Add weekly analytics.
+
+Add monthly analytics.
+
+Add hourly click analytics.
+
+Add Country Analytics with click counts and percentages.
+
+Add City Analytics with click counts.
+
+Add Device Analytics.
+
+Add Browser Analytics.
+
+Add Operating System Analytics.
+
+Add Referrer and Traffic Source Analytics.
+
+Add Top Performing Links.
+
+Add Recent Human Click Activity.
+
+Add date range filters.
+
+Add link filters.
+
+Add country filters where useful.
+
+Do not permanently store raw visitor IP addresses.
+
+==============================
+BOT ANALYTICS
+==============================
+
+Create separate bot analytics.
+
+Dashboard must show:
+
+- Total Requests
+- Human Clicks
+- Unique Human Visitors
+- Bot Requests
+- Facebook/Meta Crawler Requests
+
+Add Bot Classification Breakdown.
+
+Show:
+
+- Facebook/Meta Crawler
+- Social Preview Bot
+- Search Engine Bot
+- Suspicious Bot
+- Unknown Bot
+
+Add recent bot request activity.
+
+Bot activity must never inflate human click or unique visitor analytics.
+
+==============================
+ANALYTICS DASHBOARD
+==============================
+
+Create a professional analytics dashboard.
+
+Overview cards:
+
+- Total Links
+- Human Clicks
+- Unique Visitors
+- Bot Requests
+- Facebook/Meta Requests
+- Total Requests
+
+Add modern interactive charts for:
+
+- Click Trends
+- Country Breakdown
+- City Breakdown
+- Device Breakdown
+- Browser Breakdown
+- Operating System Breakdown
+- Traffic Source Breakdown
+- Bot Classification Breakdown
+
+Add a Recent Activity section.
+
+Clearly label Human and Bot analytics.
+
+Make analytics easy to understand on Android mobile screens.
+
+==============================
+UI THEME REDESIGN
+==============================
+
+The current application theme is too dark.
+
+Redesign the entire application with a modern premium light SaaS dashboard theme.
+
+LIGHT THEME MUST BE THE DEFAULT.
+
+Use:
+
+- Soft white backgrounds
+- Light gray page backgrounds
+- Clean white cards
+- Subtle borders
+- Soft shadows
+- Dark readable text
+- Blue and purple gradient accents
+- Modern chart styling
+- Rounded cards
+- Rounded buttons
+- Clean spacing
+- Premium SaaS dashboard appearance
+
+Do not use a heavy black or extremely dark background as the default.
+
+Add a Light / Dark theme toggle.
+
+Save the user's theme preference.
+
+The interface must be:
+
+- Mobile-first
+- Fully responsive
+- Easy to use on Android
+- Fast
+- Clean
+- Premium looking
+
+Improve the sidebar navigation.
+
+Navigation:
+
+- Overview
+- Links
+- Analytics
+- Bot Analytics
+- QR Codes
+- Settings
+
+Use a mobile navigation drawer where appropriate.
+
+==============================
+SECURITY
+==============================
+
+Use secure password hashing.
+
+Use environment variables for secrets.
+
+Validate all URLs.
+
+Add appropriate rate limiting.
+
+Rate limit suspicious automated traffic.
+
+Do not accidentally block legitimate social preview crawlers.
+
+Prevent common redirect abuse where reasonably possible.
+
+Protect authenticated dashboard routes.
+
+Prevent unauthorized users from viewing another user's link analytics.
+
+Sanitize user-controlled preview metadata.
+
+Do not expose sensitive database or server information.
+
+==============================
+ERROR HANDLING
+==============================
+
+Handle:
+
+- Invalid short links
+- Deleted links
+- Disabled links
+- Expired links
+- Invalid destination URLs
+
+Create clean user-friendly error pages.
+
+Avoid redirect loops.
+
+Avoid server crashes.
+
+Avoid crawler timeouts.
+
+==============================
+TESTING
+==============================
+
+Test the complete application.
+
+Test:
+
+1. User signup.
+2. User login.
+3. Short URL creation.
+4. Clean /:shortCode URL routing.
+5. Legacy /r/:shortCode routing.
+6. Custom alias.
+7. Human redirect.
+8. Human click analytics.
+9. Country analytics.
+10. City analytics.
+11. Device detection.
+12. Browser detection.
+13. Operating system detection.
+14. Referrer detection.
+15. Traffic source detection.
+16. Facebook/Meta crawler classification.
+17. Social preview HTTP 200 response.
+18. Open Graph metadata.
+19. Bot requests are not counted as human clicks.
+20. Unique human visitor tracking.
+21. Link expiration.
+22. Disabled links.
+23. QR code generation.
+24. Mobile responsive dashboard.
+25. Light theme default.
+26. Light/Dark theme toggle.
+
+Fix any routing, database, migration, redirect, analytics, HTTP status, timeout or UI issues discovered during testing.
+
+Build the complete working implementation.
+
+Do not stop after creating UI components.
+
+Verify the shortener, redirect system, analytics tracking, bot classification and social preview handling actually work.

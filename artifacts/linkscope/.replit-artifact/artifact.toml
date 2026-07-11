@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "LinkScope"
+version = "1.0.0"
+id = "artifacts/linkscope"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24047
+
+[services.development]
+run = "pnpm --filter @workspace/linkscope run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/linkscope", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/linkscope/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24047"
+BASE_PATH = "/"
