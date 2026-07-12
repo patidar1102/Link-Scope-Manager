@@ -4,7 +4,7 @@ import { pinoHttp } from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
 import { publishableKeyFromHost } from "@clerk/shared/keys";
 import router from "./routes";
-import redirectRouter from "./routes/redirect";
+import router from "./routes/index";
 import { logger } from "./lib/logger";
 import {
   CLERK_PROXY_PATH,
